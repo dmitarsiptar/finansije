@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Лични финансијски тракер</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 12px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 16px;
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
+    .balances {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: #eef2f5;
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .card p {
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin: 6px 0 0;
+    }
+    form {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    @media (max-width: 600px) {
+      .balances, .stats {
+        grid-template-columns: 1fr;
+      }
+      table {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Лични финансијски тракер</h1>
+
+    <h2>Почетна уштеђевина</h2>
+    <form id="initialForm">
+      <input type="number" id="initialRSD" placeholder="Почетно стање RSD" required />
+      <input type="number" id="initialEUR" placeholder="Почетно стање EUR" required />
+      <button type="submit">Сачувај почетно стање</button>
+    </form>
+
+    <div class="balances">
+      <div class="card">
+        <h2>Динари (RSD)</h2>
+        <p id="rsdBalance">0</p>
+      </div>
+      <div class="card">
+        <h2>Евра (EUR)</h2>
+        <p id="eurBalance">0</p>
+      </div>
+    </div>
+
+    <h2>Нова трансакција</h2>
+    <form id="transactionForm">
+      <select id="currency" required>
+        <option value="RSD">Динари (RSD)</option>
+        <option value="EUR">Евра (EUR)</option>
+      </select>
+      <select id="type" required>
+        <option value="add">Додај</option>
+        <option value="subtract">Одузми</option>
+      </select>
+      <input type="number" id="amount" placeholder="Износ" required />
+      <input type="text" id="description" placeholder="Опис (обавезно)" required />
+      <button type="submit">Сачувај трансакцију</button>
+    </form>
+
+    <div class="stats">
+      <div class="card">
+        <h2>Укупно додато</h2>
+        <p id="added">0</p>
+      </div>
+      <div class="card">
+        <h2>Укупно одузето</h2>
+        <p id="subtracted">0</p>
+      </div>
+    </div>
+
+    <h2>Конверзија EUR → RSD</h2>
+    <form id="convertForm">
+      <input type="number" id="eurConvert" placeholder="Износ у EUR" />
+      <button type="submit">Конвертуј (1 EUR = 117 RSD)</button>
+    </form>
+    <p id="convertResult"></p>
+
+    <h2>Историја трансакција</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Валута</th>
+          <th>Тип</th>
+          <th>Износ</th>
+          <th>Опис</th>
+          <th>Датум</th>
+        </tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let data = JSON.parse(localStorage.getItem('financeData')) || {
+      rsd: 0,
+      eur: 0,
+      added: 0,
+      subtracted: 0,
+      history: []
+    };
+
+    const rate = 117;
+
+    const rsdEl = document.getElementById('rsdBalance');
+    const eurEl = document.getElementById('eurBalance');
+    const addedEl = document.getElementById('added');
+    const subtractedEl = document.getElementById('subtracted');
+    const historyEl = document.getElementById('history');
+
+    function save() {
+      localStorage.setItem('financeData', JSON.stringify(data));
+    }
+
+    function updateUI() {
+      rsdEl.textContent = data.rsd.toFixed(2);
+      eurEl.textContent = data.eur.toFixed(2);
+      addedEl.textContent = data.added.toFixed(2);
+      subtractedEl.textContent = data.subtracted.toFixed(2);
+
+      historyEl.innerHTML = '';
+      data.history.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row.currency}</td><td>${row.type}</td><td>${row.amount}</td><td>${row.description}</td><td>${row.date}</td>`;
+        historyEl.appendChild(tr);
+      });
+    }
+
+    document.getElementById('initialForm').addEventListener('submit', e => {
+      e.preventDefault();
+      data.rsd = parseFloat(initialRSD.value);
+      data.eur = parseFloat(initialEUR.value);
+      save();
+      updateUI();
+      e.target.reset();
+    });
+
+    document.getElementById('transactionForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const curr = document.getElementById('currency').value;
+      const type = document.getElementById('type').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const desc = document.getElementById('description').value;
+
+      if (type === 'add') data.added += amount;
+      else data.subtracted += amount;
+
+      if (curr === 'RSD') data.rsd += type === 'add' ? amount : -amount;
+      else data.eur += type === 'add' ? amount : -amount;
+
+      data.history.unshift({
+        currency: curr,
+        type: type === 'add' ? 'Додато' : 'Одузето',
+        amount,
+        description: desc,
+        date: new Date().toLocaleString()
+      });
+
+      save();
+      updateUI();
+      e.target.reset();
+    });
+
+    document.getElementById('convertForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const eurVal = parseFloat(document.getElementById('eurConvert').value);
+      document.getElementById('convertResult').textContent = `${(eurVal * rate).toFixed(2)} RSD`;
+    });
+
+    updateUI();
+  </script>
+</body>
+</html>
